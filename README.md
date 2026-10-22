@@ -3,6 +3,23 @@
 Rastreador de hábitos com tarefas em volta. Roda 100% local, sem login e sem nuvem.
 A IA é opcional e só funciona se você ligar.
 
+![Tela Hoje](docs/hoje.png)
+
+<table>
+  <tr>
+    <td><img src="docs/evolucao.png" alt="Evolução: gráficos de hábitos, tarefas e foco"></td>
+    <td><img src="docs/calendario.png" alt="Calendário do mês com hábitos, prioridades e prazos"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Evolução</sub></td>
+    <td align="center"><sub>Calendário</sub></td>
+  </tr>
+</table>
+
+![Hábitos com a grade das últimas 12 semanas](docs/habitos.png)
+
+<sub>Capturas com dados fictícios.</sub>
+
 ## Rodar (Windows)
 
 ```bat
@@ -17,6 +34,18 @@ Abra **http://127.0.0.1:5001**. Ou dê dois cliques em `iniciar.bat`, que faz tu
 
 O banco fica em `dados/rotina.db` e é criado na primeira execução, já com os 8 hábitos
 iniciais. Para fazer backup, copie esse arquivo.
+
+## Rodar num servidor (Docker)
+
+```bash
+cp .env.example .env
+docker compose up -d --build
+```
+
+O app não tem login, então o compose só abre a porta para o próprio servidor. Para acessar de
+fora com segurança (Cloudflare Tunnel + Access ou Tailscale), veja [DEPLOY.md](DEPLOY.md).
+O mesmo guia mostra como rodar **sem Docker**, no PythonAnywhere (tem plano grátis) ou numa
+VPS com systemd.
 
 ## Uso diário
 
@@ -72,6 +101,8 @@ app.py               ponto de entrada (porta 5001)
 config.json          configuração (explicada em CONFIG.md)
 PROMPT.md            especificação completa (para recriar/evoluir com IA)
 .env                 chave da IA (copie de .env.example)
+Dockerfile, docker-compose.yml, DEPLOY.md   rodar num servidor
+docs/                capturas de tela
 rotina/
   configuracao.py    config, fuso horário, formatação de datas pt-BR
   modelos.py         tabelas SQLite

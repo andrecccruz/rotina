@@ -205,6 +205,21 @@ def test_post_de_outra_origem_bloqueado(app, cli):
     assert r.status_code == 403
 
 
+def test_origem_atras_de_proxy(tmp_path, monkeypatch):
+    monkeypatch.setenv("ROTINA_PROXY", "1")
+    monkeypatch.setattr("rotina.ia.RAIZ", str(tmp_path))
+    app = criar_app({"SQLALCHEMY_DATABASE_URI": f"sqlite:///{tmp_path}/p.db",
+                     "SEMEAR": False, "TESTING": True})
+    cli = app.test_client()
+    proxy = {"Host": "rotina:5001", "X-Forwarded-Host": "rotina.exemplo.com"}
+    r = cli.post("/garagem/capturar", data={"texto": "x"},
+                 headers={**proxy, "Origin": "https://rotina.exemplo.com"})
+    assert r.status_code == 302
+    r = cli.post("/garagem/capturar", data={"texto": "x"},
+                 headers={**proxy, "Origin": "http://mal.com"})
+    assert r.status_code == 403
+
+
 def test_todas_as_telas(app, cli):
     from rotina import HABITOS_INICIAIS, _semear
     _semear()

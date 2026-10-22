@@ -66,11 +66,17 @@ def criar_app(config_extra=None):
     app.config.update(
         ROTINA=cfg,
         SQLALCHEMY_DATABASE_URI="sqlite:///" + os.path.join(pasta_dados, "rotina.db"),
-        SECRET_KEY=os.environ.get("ROTINA_SECRET", "rotina-local"),
+        SECRET_KEY=os.environ.get("ROTINA_SECRET") or "rotina-local",
         SEMEAR=True,
     )
     if config_extra:
         app.config.update({k: v for k, v in config_extra.items() if k != "ROTINA"})
+
+    if os.environ.get("ROTINA_PROXY") == "1":
+        # Atrás de proxy reverso (Docker + túnel): usa o host original (X-Forwarded-Host)
+        # na checagem de origem. Só ligar quando houver um proxy na frente.
+        from werkzeug.middleware.proxy_fix import ProxyFix
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
     db.init_app(app)
 

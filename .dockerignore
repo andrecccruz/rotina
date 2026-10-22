@@ -1,0 +1,11 @@
+.env
+.git
+.venv
+venv
+dados
+docs
+tests
+__pycache__
+*.pyc
+.pytest_cache
+iniciar.bat

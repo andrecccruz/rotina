@@ -1,0 +1,30 @@
+services:
+  rotina:
+    build: .
+    restart: unless-stopped
+    # Só este computador acessa. Para acesso de fora, use o túnel abaixo (com login).
+    ports:
+      - "127.0.0.1:5001:5001"
+    environment:
+      AZURE_OPENAI_API_KEY: ${AZURE_OPENAI_API_KEY:-}
+      IA_API_KEY: ${IA_API_KEY:-}
+      ROTINA_SECRET: ${ROTINA_SECRET:-}
+    volumes:
+      - dados:/app/dados
+      # Para usar o seu config.json sem reconstruir a imagem:
+      # - ./config.json:/app/config.json:ro
+
+  # Opcional: docker compose --profile tunel up -d
+  # Publica o app por um Cloudflare Tunnel. Proteja o endereço com Cloudflare Access.
+  cloudflared:
+    image: cloudflare/cloudflared:2024.12.2
+    profiles: ["tunel"]
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:-}
+    depends_on:
+      - rotina
+
+volumes:
+  dados:
