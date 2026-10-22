@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m with context %}
+{% block titulo %}Tarefas{% endblock %}
+{% block conteudo %}
+{% set aqui = request.full_path %}
+<div class="cabeca">
+  <div><h1>Tarefas</h1><div class="suave pequeno">Título bom é ação verificável: “implementar função X”, não “mexer no projeto”.</div></div>
+  <a class="botao primario" href="{{ url_for('tarefas.form', next=aqui) }}">+ nova tarefa</a>
+</div>
+
+<div class="barra-filtros">
+  <nav class="segmentado" aria-label="Situação">
+    {% for k, rot in [('abertas','Abertas'),('feito','Concluídas'),('todas','Todas')] %}
+      <a class="{{ 'ativo' if filtro == k }}" href="{{ url_for('tarefas.lista', status=k, projeto=projeto) }}"
+         {% if filtro == k %}aria-current="page"{% endif %}>{{ rot }} <span class="contagem">{{ contagens[k] }}</span></a>
+    {% endfor %}
+  </nav>
+
+  <form method="get" class="filtro-projeto" data-autoenviar>
+    <input type="hidden" name="status" value="{{ filtro }}">
+    {% set atual = projetos|selectattr('id', 'equalto', (projeto|int if projeto.isdigit() else -1))|first %}
+    <span class="ponto" style="background:{{ atual.cor if atual else 'var(--fraco)' }}"></span>
+    <label for="f-projeto" class="sr">Projeto</label>
+    <select id="f-projeto" name="projeto">
+      <option value="" {{ 'selected' if not projeto }}>Todos os projetos</option>
+      {% for p in projetos %}<option value="{{ p.id }}" {{ 'selected' if projeto == p.id|string }}>{{ p.nome }}</option>{% endfor %}
+      <option value="avulso" {{ 'selected' if projeto == 'avulso' }}>Avulsas (sem projeto)</option>
+    </select>
+    <noscript><button class="mini">filtrar</button></noscript>
+  </form>
+
+  <a class="link-discreto" href="{{ url_for('projetos.lista') }}">gerenciar projetos →</a>
+</div>
+
+<section class="painel">
+  <form method="post" action="{{ url_for('tarefas.rapida') }}" class="linha rapida">
+    <input type="hidden" name="next" value="{{ aqui }}">
+    <input name="titulo" placeholder="+ tarefa rápida" style="flex:1;min-width:180px" autocomplete="off">
+    <select name="projeto_id" aria-label="projeto da nova tarefa">
+      <option value="">avulsa</option>
+      {% for p in projetos %}<option value="{{ p.id }}" {{ 'selected' if projeto == p.id|string }}>{{ p.nome }}</option>{% endfor %}
+    </select>
+    <input type="date" name="prazo" aria-label="prazo">
+    <button>adicionar</button>
+  </form>
+  <ul class="lista">
+    {% for t in tarefas %}<li>{{ m.tarefa(t, aqui, hoje_data, ia_ativa, timer) }}</li>
+    {% else %}<li class="suave">Nada por aqui.</li>{% endfor %}
+  </ul>
+</section>
+{% endblock %}

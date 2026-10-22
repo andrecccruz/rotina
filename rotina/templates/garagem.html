@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block titulo %}Garagem{% endblock %}
+{% block conteudo %}
+<div class="cabeca">
+  <div>
+    <h1>Garagem de ideias</h1>
+    <div class="suave pequeno">Ter uma ideia não é começar um projeto. Ela fica aqui, segura, até ter vaga.</div>
+  </div>
+</div>
+
+{% if congelado %}
+<div class="aviso-caixa">
+  <b>Funcionalidades do app congeladas até {{ liberacao|data_br }}</b> (faltam {{ faltam }} dia{{ 's' if faltam != 1 }}).
+  Ideia para o sistema entra aqui com a etiqueta <span class="selo app">app</span> e não vai para o código.
+  No dia {{ liberacao|data_br }}, escolha <b>uma</b> — só se ainda fizer falta depois de duas semanas de uso real.
+</div>
+{% elif total_app %}
+<div class="aviso-caixa">
+  Revisão liberada: há {{ total_app }} ideia{{ 's' if total_app != 1 }} para o app. Escolha <b>uma</b>. O resto continua estacionado.
+</div>
+{% endif %}
+
+<section class="painel">
+  <form method="post" action="{{ url_for('garagem.capturar') }}" class="linha" style="flex-wrap:wrap">
+    <input name="texto" placeholder="Nova ideia…" style="flex:1;min-width:220px" required autocomplete="off">
+    <select name="etiqueta"><option value="geral">geral</option><option value="app">app (o próprio sistema)</option></select>
+    <button class="primario">estacionar</button>
+  </form>
+</section>
+
+<nav class="segmentado" aria-label="Etiqueta" style="margin-bottom:14px">
+  <a class="{{ 'ativo' if not etiqueta }}" href="{{ url_for('garagem.lista') }}">todas</a>
+  <a class="{{ 'ativo' if etiqueta == 'geral' }}" href="{{ url_for('garagem.lista', etiqueta='geral') }}">geral</a>
+  <a class="{{ 'ativo' if etiqueta == 'app' }}" href="{{ url_for('garagem.lista', etiqueta='app') }}">app</a>
+</nav>
+
+<section class="painel">
+  <ul class="lista">
+  {% for i in ideias %}
+    <li class="tarefa">
+      <div>
+        <div class="titulo">{{ i.texto }}</div>
+        <div class="detalhes">{% if i.etiqueta == 'app' %}<span class="selo app">app</span>{% endif %}<span class="mono fraco">{{ i.criada_em.date()|data_br }}</span></div>
+      </div>
+      <div class="acoes">
+        <form class="inline linha" method="post" action="{{ url_for('garagem.promover', iid=i.id) }}"
+          {% if i.etiqueta == 'app' and congelado %}data-confirmar="O congelamento vai até {{ liberacao|data_br }}. Promover mesmo assim?"{% endif %}>
+          <select name="projeto_id" class="mini" style="padding:4px 6px;font-size:.8rem">
+            <option value="">avulsa</option>
+            {% for p in projetos %}<option value="{{ p.id }}">{{ p.nome }}</option>{% endfor %}
+          </select>
+          <button class="mini">virar tarefa</button>
+        </form>
+        <form class="inline" method="post" action="{{ url_for('garagem.descartar', iid=i.id) }}"><button class="mini" title="descartar">descartar</button></form>
+      </div>
+    </li>
+  {% else %}
+    <li class="suave">Garagem vazia. Use o campo 💡 no topo de qualquer tela (atalho: tecla /).</li>
+  {% endfor %}
+  </ul>
+</section>
+{% endblock %}

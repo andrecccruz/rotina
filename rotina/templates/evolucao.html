@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+{% block titulo %}Evolução
+<h2 style="margin:26px 0 12px">Mais detalhes</h2>
+<div class="graficos">
+  <section class="painel">
+    <h3>Tarefas criadas × concluídas</h3>
+    <p class="pequeno suave" style="margin:0 0 6px">
+      {% if saldo > 0 %}No período você criou <b>{{ saldo }}</b> tarefa{{ 's' if saldo != 1 }} a mais do que concluiu: a fila está crescendo.
+      {% elif saldo < 0 %}No período você concluiu <b>{{ -saldo }}</b> tarefa{{ 's' if saldo != -1 }} a mais do que criou: a fila está diminuindo.
+      {% else %}Criou e concluiu na mesma medida: a fila ficou estável.{% endif %}
+    </p>
+    <div class="legenda-g">
+      <span><i style="background:{{ cores.criadas }}"></i>criadas</span>
+      <span><i style="background:{{ cores.feito }}"></i>concluídas</span>
+    </div>
+    <div class="grafico-caixa">{{ g_fluxo }}</div>
+  </section>
+
+  <section class="painel">
+    <h3>Esta semana × semana anterior</h3>
+    <p class="pequeno suave" style="margin:0 0 10px">Cumprimento de cada hábito: últimos 7 dias contra os 7 anteriores.</p>
+    <div class="legenda-g">
+      <span><i class="bola antes"></i>7 dias anteriores</span>
+      <span><i class="bola agora"></i>últimos 7 dias</span>
+    </div>
+    <ul class="halteres">
+      {% for x in semanas %}
+      {% set agora = (x.agora * 100)|round|int %}
+      {% set antes = (x.antes * 100)|round|int if x.antes is not none else none %}
+      <li title="{{ x.habito.nome }}: {{ antes if antes is not none else '—' }}% → {{ agora }}%">
+        <span class="h-nome">{{ x.habito.nome }}</span>
+        <span class="haltere">
+          {% if antes is not none %}
+            <span class="h-linha" style="left:{{ [antes, agora]|min }}%;width:{{ (agora - antes)|abs }}%"></span>
+            <span class="h-bola antes" style="left:{{ antes }}%"></span>
+          {% endif %}
+          <span class="h-bola agora" style="left:{{ agora }}%"></span>
+        </span>
+        <span class="h-delta mono">
+          {% if antes is none %}novo{% elif agora > antes %}▲ {{ agora - antes }}{% elif agora < antes %}▼ {{ antes - agora }}{% else %}= 0{% endif %}{% if antes is not none %} pp{% endif %}
+        </span>
+      </li>
+      {% else %}<li class="suave">Sem hábitos ativos.</li>{% endfor %}
+    </ul>
+    <p class="ajuda">pp = pontos percentuais. A semana atual inclui hoje, que ainda está em andamento.</p>
+  </section>
+
+  <section class="painel">
+    <h3>Tempo por projeto</h3>
+    <p class="pequeno suave" style="margin:0 0 10px">Timer nos últimos {{ n }} dias. A parte mais escura é o tempo marcado como focado.</p>
+    <ul class="hbarras">
+      {% for x in projetos %}
+      {% set cor = x.projeto.cor if x.projeto else '#a0a6b5' %}
+      <li title="{{ x.segundos|duracao }} no total, {{ x.focados|duracao }} focado">
+        <span class="hb-nome linha" style="gap:7px"><span class="ponto" style="background:{{ cor }}"></span>{{ x.projeto.nome if x.projeto else 'Avulsas' }}</span>
+        <span class="hb-trilha"><span style="width:{{ (100 * x.segundos / maior_proj)|round|int }}%;background:{{ cor }};opacity:.45;position:relative">
+          <span style="position:absolute;inset:0 auto 0 0;width:{{ (100 * x.focados / x.segundos)|round|int if x.segundos else 0 }}%;background:{{ cor }};opacity:1;border-radius:0"></span></span></span>
+        <span class="hb-valor mono">{{ x.segundos|duracao }}</span>
+        <span class="hb-det fraco">{{ x.focados|duracao }} focado</span>
+      </li>
+      {% else %}<li class="suave">Nenhuma sessão de timer no período.</li>{% endfor %}
+    </ul>
+  </section>
+
+  {% for x in numeros %}
+  <section class="painel">
+    <h3>{{ x.habito.nome }} <span class="suave pequeno" style="font-weight:400">({{ x.habito.unidade }} por dia)</span></h3>
+    <p class="pequeno suave" style="margin:0 0 6px">
+      {% if x.media is not none %}Média {{ x.media|num }} {{ x.habito.unidade }} em {{ x.registros }} dia{{ 's' if x.registros != 1 }} registrado{{ 's' if x.registros != 1 }}.{% else %}Nenhum registro no período.{% endif %}
+      {% if x.habito.meta is none and x.habito.direcao == 'max' %} Sem meta ainda (fase de medição): a linha mostra a média.
+      {% elif x.habito.meta is not none %} Meta: {{ 'até ' if x.habito.direcao == 'max' }}{{ x.habito.meta|num }}.{% endif %}
+    </p>
+    <div class="grafico-caixa">{{ x.grafico }}</div>
+  </section>
+  {% endfor %}
+</div>
+{% endblock %}
+{% block conteudo %}
+<div class="cabeca">
+  <div>
+    <h1>Evolução</h1>
+    <div class="suave pequeno">Compare com você mesmo na semana passada, não com um ideal.</div>
+  </div>
+  <nav class="segmentado" aria-label="Período">
+    {% for k in (7, 14, 30, 90) %}<a class="{{ 'ativo' if n == k }}" href="{{ url_for('evolucao.painel', dias=k) }}">{{ k }} dias</a>{% endfor %}
+  </nav>
+</div>
+
+<div class="tiles">
+  <div class="tile"><span>Hábitos cumpridos</span><b>{{ resumo.taxa if resumo.taxa is not none else '—' }}{% if resumo.taxa is not none %}%{% endif %}</b></div>
+  <div class="tile"><span>Dias com todos os hábitos</span><b>{{ resumo.dias_completos }}</b></div>
+  <div class="tile"><span>Tarefas concluídas</span><b>{{ resumo.concluidas }}</b></div>
+  <div class="tile"><span>A fazer (início → hoje)</span><b>{{ resumo.a_fazer_inicio }} → {{ resumo.a_fazer_hoje }}</b></div>
+  <div class="tile"><span>Tempo focado</span><b>{{ (resumo.focado * 60)|duracao }}</b></div>
+</div>
+
+<div class="graficos">
+  <section class="painel">
+    <h3>Hábitos cumpridos por dia</h3>
+    <div class="legenda-g">
+      <span><i style="background:{{ cores.feito }}"></i>feito</span>
+      <span><i style="background:{{ cores.minimo }}"></i>mínimo</span>
+      <span><i class="trilha"></i>previstos no dia</span>
+    </div>
+    <div class="grafico-caixa">{{ g_hab }}</div>
+    <details class="tabela-dados"><summary>ver tabela</summary>
+      <table><thead><tr><th>Dia</th><th>Feito</th><th>Mínimo</th><th>Previstos</th></tr></thead><tbody>
+      {% for x in hab|reverse %}<tr><td>{{ x.data|data_br }}</td><td>{{ x.feito }}</td><td>{{ x.minimo }}</td><td>{{ x.previstos }}</td></tr>{% endfor %}
+      </tbody></table>
+    </details>
+  </section>
+
+  <section class="painel">
+    <h3>Tarefas por dia</h3>
+    <div class="legenda-g">
+      <span><i style="background:{{ cores.feito }}"></i>concluídas no dia</span>
+      <span><i style="background:{{ cores.afazer }}"></i>a fazer no fim do dia</span>
+    </div>
+    <div class="grafico-caixa">{{ g_tar }}</div>
+    <details class="tabela-dados"><summary>ver tabela</summary>
+      <table><thead><tr><th>Dia</th><th>Concluídas</th><th>A fazer</th><th>Criadas</th></tr></thead><tbody>
+      {% for x in tar|reverse %}<tr><td>{{ x.data|data_br }}</td><td>{{ x.concluidas }}</td><td>{{ x.a_fazer }}</td><td>{{ x.criadas }}</td></tr>{% endfor %}
+      </tbody></table>
+    </details>
+  </section>
+
+  <section class="painel">
+    <h3>Minutos focados por dia</h3>
+    <p class="pequeno suave" style="margin:0 0 6px">Soma das sessões do timer marcadas como focadas.</p>
+    <div class="grafico-caixa">{{ g_foco }}</div>
+    <details class="tabela-dados"><summary>ver tabela</summary>
+      <table><thead><tr><th>Dia</th><th>Focado (min)</th><th>Total no timer (min)</th></tr></thead><tbody>
+      {% for x in foco|reverse %}<tr><td>{{ x.data|data_br }}</td><td>{{ x.focado }}</td><td>{{ x.total }}</td></tr>{% endfor %}
+      </tbody></table>
+    </details>
+  </section>
+
+  <section class="painel">
+    <h3>Cumprimento por hábito</h3>
+    <p class="pequeno suave" style="margin:0 0 10px">Nos últimos {{ n }} dias. Mínimo conta.</p>
+    <ul class="hbarras">
+      {% for x in por_habito %}
+      <li>
+        <span class="hb-nome">{{ x.habito.nome }}</span>
+        <span class="hb-trilha"><span style="width:{{ (x.taxa * 100)|round|int }}%;background:{{ cores.feito }}"></span></span>
+        <span class="hb-valor mono">{{ (x.taxa * 100)|round|int }}%</span>
+        <span class="hb-det fraco">{{ x.detalhe }}</span>
+      </li>
+      {% else %}<li class="suave">Sem hábitos ativos.</li>{% endfor %}
+    </ul>
+  </section>
+</div>
+
+<h2 style="margin:26px 0 12px">Mais detalhes</h2>
+<div class="graficos">
+  <section class="painel">
+    <h3>Tarefas criadas × concluídas</h3>
+    <p class="pequeno suave" style="margin:0 0 6px">
+      {% if saldo > 0 %}No período você criou <b>{{ saldo }}</b> tarefa{{ 's' if saldo != 1 }} a mais do que concluiu: a fila está crescendo.
+      {% elif saldo < 0 %}No período você concluiu <b>{{ -saldo }}</b> tarefa{{ 's' if saldo != -1 }} a mais do que criou: a fila está diminuindo.
+      {% else %}Criou e concluiu na mesma medida: a fila ficou estável.{% endif %}
+    </p>
+    <div class="legenda-g">
+      <span><i style="background:{{ cores.criadas }}"></i>criadas</span>
+      <span><i style="background:{{ cores.feito }}"></i>concluídas</span>
+    </div>
+    <div class="grafico-caixa">{{ g_fluxo }}</div>
+  </section>
+
+  <section class="painel">
+    <h3>Esta semana × semana anterior</h3>
+    <p class="pequeno suave" style="margin:0 0 10px">Cumprimento de cada hábito: últimos 7 dias contra os 7 anteriores.</p>
+    <div class="legenda-g">
+      <span><i class="bola antes"></i>7 dias anteriores</span>
+      <span><i class="bola agora"></i>últimos 7 dias</span>
+    </div>
+    <ul class="halteres">
+      {% for x in semanas %}
+      {% set agora = (x.agora * 100)|round|int %}
+      {% set antes = (x.antes * 100)|round|int if x.antes is not none else none %}
+      <li title="{{ x.habito.nome }}: {{ antes if antes is not none else '—' }}% → {{ agora }}%">
+        <span class="h-nome">{{ x.habito.nome }}</span>
+        <span class="haltere">
+          {% if antes is not none %}
+            <span class="h-linha" style="left:{{ [antes, agora]|min }}%;width:{{ (agora - antes)|abs }}%"></span>
+            <span class="h-bola antes" style="left:{{ antes }}%"></span>
+          {% endif %}
+          <span class="h-bola agora" style="left:{{ agora }}%"></span>
+        </span>
+        <span class="h-delta mono">
+          {% if antes is none %}novo{% elif agora > antes %}▲ {{ agora - antes }}{% elif agora < antes %}▼ {{ antes - agora }}{% else %}= 0{% endif %}{% if antes is not none %} pp{% endif %}
+        </span>
+      </li>
+      {% else %}<li class="suave">Sem hábitos ativos.</li>{% endfor %}
+    </ul>
+    <p class="ajuda">pp = pontos percentuais. A semana atual inclui hoje, que ainda está em andamento.</p>
+  </section>
+
+  <section class="painel">
+    <h3>Tempo por projeto</h3>
+    <p class="pequeno suave" style="margin:0 0 10px">Timer nos últimos {{ n }} dias. A parte mais escura é o tempo marcado como focado.</p>
+    <ul class="hbarras">
+      {% for x in projetos %}
+      {% set cor = x.projeto.cor if x.projeto else '#a0a6b5' %}
+      <li title="{{ x.segundos|duracao }} no total, {{ x.focados|duracao }} focado">
+        <span class="hb-nome linha" style="gap:7px"><span class="ponto" style="background:{{ cor }}"></span>{{ x.projeto.nome if x.projeto else 'Avulsas' }}</span>
+        <span class="hb-trilha"><span style="width:{{ (100 * x.segundos / maior_proj)|round|int }}%;background:{{ cor }};opacity:.45;position:relative">
+          <span style="position:absolute;inset:0 auto 0 0;width:{{ (100 * x.focados / x.segundos)|round|int if x.segundos else 0 }}%;background:{{ cor }};opacity:1;border-radius:0"></span></span></span>
+        <span class="hb-valor mono">{{ x.segundos|duracao }}</span>
+        <span class="hb-det fraco">{{ x.focados|duracao }} focado</span>
+      </li>
+      {% else %}<li class="suave">Nenhuma sessão de timer no período.</li>{% endfor %}
+    </ul>
+  </section>
+
+  {% for x in numeros %}
+  <section class="painel">
+    <h3>{{ x.habito.nome }} <span class="suave pequeno" style="font-weight:400">({{ x.habito.unidade }} por dia)</span></h3>
+    <p class="pequeno suave" style="margin:0 0 6px">
+      {% if x.media is not none %}Média {{ x.media|num }} {{ x.habito.unidade }} em {{ x.registros }} dia{{ 's' if x.registros != 1 }} registrado{{ 's' if x.registros != 1 }}.{% else %}Nenhum registro no período.{% endif %}
+      {% if x.habito.meta is none and x.habito.direcao == 'max' %} Sem meta ainda (fase de medição): a linha mostra a média.
+      {% elif x.habito.meta is not none %} Meta: {{ 'até ' if x.habito.direcao == 'max' }}{{ x.habito.meta|num }}.{% endif %}
+    </p>
+    <div class="grafico-caixa">{{ x.grafico }}</div>
+  </section>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,19 @@
+{
+  "nome_app": "Rotina",
+  "porta": 5001,
+  "host": "127.0.0.1",
+  "fuso_horario": "America/Sao_Paulo",
+  "dias_congelamento_funcionalidades": 14,
+  "ia": {
+    "ativa": false,
+    "provedor": "azure_openai",
+    "endpoint": "https://SEU-RECURSO.openai.azure.com",
+    "deployment": "gpt-4o-mini",
+    "api_version": "2024-10-21",
+    "modelo": "",
+    "timeout_segundos": 60,
+    "enviar_journaling": false,
+    "cache": true,
+    "cache_dias": 30
+  }
+}

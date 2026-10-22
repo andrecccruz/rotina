@@ -1,0 +1,18 @@
+# Segredos
+.env
+
+# Dados pessoais (banco e log da IA são criados em runtime)
+dados/*
+!dados/.gitkeep
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Sistema
+Thumbs.db
+desktop.ini
+.DS_Store

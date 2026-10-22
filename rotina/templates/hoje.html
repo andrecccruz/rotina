@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m with context %}
+{% block titulo %}Hoje{% endblock %}
+{% block conteudo %}
+{% set aqui = url_for('hoje.hoje_view') %}
+<div class="cabeca">
+  <div>
+    <h1>{{ hoje_data|data_extenso|capitalize }}</h1>
+    <div class="suave pequeno">Uma coisa por vez. Em dia ruim, o mínimo conta.</div>
+  </div>
+  <div class="numeros">
+    <div class="numero"><b>{{ cumpridos }}/{{ resumos|length }}</b><span>hábitos</span></div>
+    <div class="numero"><b>{{ concluidas }}</b><span>tarefas concluídas</span></div>
+    <div class="numero"><b>{{ (minutos * 60)|duracao }}</b><span>no timer</span></div>
+  </div>
+</div>
+
+<div class="grade-2">
+  <div>
+    {% if prioridade %}
+    <section class="painel destaque">
+      <h2>★ Prioridade de hoje</h2>
+      {{ m.tarefa(prioridade, aqui, hoje_data, ia_ativa, timer) }}
+    </section>
+    {% else %}
+    <section class="painel vazio">
+      <h2>★ Prioridade de hoje</h2>
+      {% if abertas %}
+      <form method="post" action="{{ url_for('tarefas.prioridade') }}" class="linha" style="flex-wrap:wrap">
+        <input type="hidden" name="dia" value="hoje"><input type="hidden" name="next" value="{{ aqui }}">
+        <select name="tid" style="flex:1;min-width:200px">
+          {% for t in abertas %}<option value="{{ t.id }}">{{ t.titulo }}{% if t.prazo %} — {{ t.prazo|data_curta }}{% endif %}</option>{% endfor %}
+        </select>
+        <button class="primario">definir</button>
+      </form>
+      <p class="ajuda">Escolher a prioridade é o que alimenta o hábito “Concluir a prioridade do dia”.</p>
+      {% else %}
+      <p class="suave" style="margin:0">Nenhuma tarefa aberta. Crie uma abaixo.</p>
+      {% endif %}
+    </section>
+    {% endif %}
+
+    <section class="painel">
+      <div class="linha entre" style="margin-bottom:6px"><h2 style="margin:0">Tarefas do dia</h2><a class="pequeno" href="{{ url_for('tarefas.lista') }}">todas →</a></div>
+      <form method="post" action="{{ url_for('tarefas.rapida') }}" class="linha" style="margin:8px 0 6px">
+        <input type="hidden" name="next" value="{{ aqui }}">
+        <input type="hidden" name="prazo" value="{{ hoje_data.isoformat() }}">
+        <input name="titulo" placeholder="+ tarefa para hoje (microtarefa: “ler págs. 20–25”)" style="flex:1" autocomplete="off">
+      </form>
+      {% if not (atrasadas or vencem or fazendo) %}
+        <p class="suave pequeno" style="margin:10px 0 0">Nada atrasado, vencendo hoje ou em andamento.</p>
+      {% endif %}
+      <ul class="lista">
+        {% for t in atrasadas %}<li>{{ m.tarefa(t, aqui, hoje_data, ia_ativa, timer) }}</li>{% endfor %}
+        {% for t in vencem %}{% if not prioridade or t.id != prioridade.id %}<li>{{ m.tarefa(t, aqui, hoje_data, ia_ativa, timer) }}</li>{% endif %}{% endfor %}
+        {% for t in fazendo %}<li>{{ m.tarefa(t, aqui, hoje_data, ia_ativa, timer) }}</li>{% endfor %}
+      </ul>
+    </section>
+
+    {% if ia_ativa %}
+    <section class="painel" data-ia-caixa data-ia-memoria>
+      <h2>Assistente</h2>
+      <textarea name="pergunta" rows="2" style="min-height:58px" placeholder="Pergunte sobre uma tarefa, prazo ou cronograma… (opcional)"></textarea>
+      <div class="acoes" style="margin-top:8px">
+        <button type="button" class="primario" data-ia-modo="primeiro">O que faço primeiro?</button>
+        <button type="button" data-ia-modo="livre">Perguntar</button>
+        <button type="button" data-ia-modo="semana">Como foi minha semana?</button>
+      </div>
+      <div class="ia-texto" style="margin-top:12px"></div>
+    </section>
+    {% endif %}
+  </div>
+
+  <div>
+    <section class="painel">
+      <div class="linha entre" style="margin-bottom:6px"><h2 style="margin:0">Hábitos</h2><a class="pequeno" href="{{ url_for('habitos.lista') }}">histórico →</a></div>
+      <ul class="lista">
+      {% for r in resumos %}{% set h = r.habito %}
+        <li class="habito">
+          <div>
+            <div class="nome">{{ h.nome }}</div>
+            <div class="meta">
+              {{ m.sequencia(r) }}
+              {% if h.frequencia == 'semanal' %} · <span class="mono">{{ r.semana }}/{{ h.vezes_semana }}</span> na semana{% endif %}
+            </div>
+            <div class="meta fraco">{{ m.descricao_meta(h) }}</div>
+          </div>
+          <div>{{ m.check(r, aqui) }}</div>
+        </li>
+      {% else %}
+        <li class="suave">Nenhum hábito previsto para hoje.</li>
+      {% endfor %}
+      </ul>
+      <p class="ajuda" style="margin-top:10px">Redes, checagens e leitura também podem ser anotados de uma vez no <a href="{{ url_for('hoje.fechamento') }}">fechamento do dia</a>.</p>
+    </section>
+  </div>
+</div>
+{% endblock %}

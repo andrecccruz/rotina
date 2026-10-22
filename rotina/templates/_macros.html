@@ -1,0 +1,92 @@
+{% macro sequencia(r) -%}
+<span class="seq" title="sequência atual · melhor">
+  {% if r.atual %}<span class="fogo">▲</span>{% endif %}
+  <b>{{ r.atual }}</b> {{ 'sem' if r.unidade == 'semanas' else 'd' }} · melhor {{ r.melhor }}
+</span>
+{%- endmacro %}
+
+{% macro descricao_meta(h) -%}
+  {%- if h.tipo == 'numero' -%}
+    {%- if h.direcao == 'max' -%}
+      {%- if h.meta is none -%}medindo — registrar já conta
+      {%- else -%}até {{ h.meta|num }} {{ h.unidade }}{% if h.meta_minima is not none %} · mínimo: até {{ h.meta_minima|num }}{% endif %}{%- endif -%}
+    {%- else -%}
+      {%- if h.meta is not none -%}{{ h.meta|num }} {{ h.unidade }}{% else %}qualquer valor{% endif %}{% if h.meta_minima is not none %} · mínimo: {{ h.meta_minima|num }}{% endif %}
+    {%- endif -%}
+  {%- elif h.tipo == 'auto_flow' -%}{{ (h.meta or 60)|num }} min focados · mínimo: uma sessão focada de {{ (h.meta_minima or 25)|num }} min
+  {%- elif h.tipo == 'auto_prioridade' -%}concluir a tarefa ★ do dia · mínimo: trabalhar nela
+  {%- elif h.tipo == 'auto_journal' -%}escrever no fechamento do dia
+  {%- elif h.versao_minima -%}mínimo: {{ h.versao_minima }}
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro frequencia(h) -%}
+  {%- if h.frequencia == 'semanal' -%}{{ h.vezes_semana }}× por semana
+  {%- elif h.frequencia == 'dias' -%}{% for d in h.dias_lista %}{{ DIAS_SEMANA[d] }}{{ ', ' if not loop.last }}{% endfor %}
+  {%- else -%}diário{%- endif -%}
+{%- endmacro %}
+
+{% macro check(r, proximo) -%}
+{% set h = r.habito %}
+{% if h.tipo == 'sim_nao' %}
+  <form method="post" action="{{ url_for('habitos.registrar', hid=h.id) }}" class="escolha">
+    <input type="hidden" name="next" value="{{ proximo }}">
+    <button name="nivel" value="{{ '' if r.nivel_hoje == 'minimo' else 'minimo' }}" class="{{ 'on-minimo' if r.nivel_hoje == 'minimo' }}" title="{{ h.versao_minima or 'versão mínima' }}">mínimo</button>
+    <button name="nivel" value="{{ '' if r.nivel_hoje == 'feito' else 'feito' }}" class="{{ 'on-feito' if r.nivel_hoje == 'feito' }}">feito</button>
+  </form>
+{% elif h.tipo == 'numero' %}
+  <form method="post" action="{{ url_for('habitos.registrar', hid=h.id) }}" class="valor">
+    <input type="hidden" name="next" value="{{ proximo }}">
+    <input name="valor" inputmode="decimal" value="{{ r.valor_hoje|num }}" placeholder="0" aria-label="{{ h.nome }}">
+    <span class="suave pequeno">{{ h.unidade }}</span>
+    <button class="mini">ok</button>
+    {% if r.nivel_hoje %}<span class="selo {{ r.nivel_hoje }}">{{ 'feito' if r.nivel_hoje == 'feito' else 'mínimo' }}</span>{% endif %}
+  </form>
+{% else %}
+  <span class="selo {{ r.nivel_hoje or '' }}">{{ {'feito': 'feito', 'minimo': 'mínimo'}.get(r.nivel_hoje, 'automático') }}</span>
+{% endif %}
+{%- endmacro %}
+
+{% macro grade(semanas) -%}
+<div class="grade-hab" aria-hidden="true">
+  {% for semana in semanas %}{% for c in semana %}<span class="cel {{ c.estado }}" title="{{ c.data|data_br }} — {{ {'feito':'feito','minimo':'mínimo','falhou':'não feito','pendente':'hoje','livre':'não previsto','vazio':'—','futuro':'','antes':'antes de começar'}[c.estado] }}"></span>{% endfor %}{% endfor %}
+</div>
+{%- endmacro %}
+
+{% macro tarefa(t, proximo, hoje_data, ia_ativa, timer, compacta=False) -%}
+{% set atrasada = t.prazo and t.prazo < hoje_data and t.status != 'feito' %}
+{% set rodando = timer and timer.tarefa_id == t.id %}
+<div class="tarefa {{ 'feita' if t.status == 'feito' }}">
+  <div>
+    <div class="titulo">{% if t.prioritaria_em == hoje_data %}<span title="prioridade de hoje" style="color:var(--aviso)">★ </span>{% endif %}{{ t.titulo }}</div>
+    <div class="detalhes">
+      {% if t.projeto %}<span class="linha" style="gap:5px"><span class="ponto" style="background:{{ t.projeto.cor }}"></span>{{ t.projeto.nome }}</span>{% endif %}
+      {% if t.prazo %}
+        {% if atrasada %}<span class="selo atrasada">atrasada · {{ t.prazo|data_curta }}</span>
+        {% elif t.prazo == hoje_data and t.status != 'feito' %}<span class="selo hoje">vence hoje</span>
+        {% else %}<span class="selo">{{ t.prazo|data_curta }}</span>{% endif %}
+      {% endif %}
+      {% if t.status == 'fazendo' %}<span class="selo">fazendo</span>{% endif %}
+      {% if t.sessoes %}<span class="mono fraco">{{ t.segundos_totais|duracao }}</span>{% endif %}
+    </div>
+    {% if t.proximo_passo and t.status != 'feito' and not compacta %}<div class="passo">{{ t.proximo_passo }}</div>{% endif %}
+  </div>
+  <div class="acoes">
+    {% if t.status != 'feito' %}
+      {% if rodando %}
+        <button class="mini verde" type="button" data-abrir-parar>■ parar</button>
+      {% else %}
+        <form class="inline" method="post" action="{{ url_for('tarefas.timer_iniciar', tid=t.id) }}"><input type="hidden" name="next" value="{{ proximo }}"><button class="mini icone" title="iniciar timer">▶</button></form>
+      {% endif %}
+      <form class="inline" method="post" action="{{ url_for('tarefas.concluir', tid=t.id) }}"><input type="hidden" name="next" value="{{ proximo }}"><button class="mini icone" title="concluir">✓</button></form>
+      {% if t.prioritaria_em != hoje_data %}
+      <form class="inline" method="post" action="{{ url_for('tarefas.prioridade', tid=t.id) }}"><input type="hidden" name="next" value="{{ proximo }}"><input type="hidden" name="dia" value="hoje"><button class="mini icone" title="tornar a prioridade de hoje">★</button></form>
+      {% endif %}
+      {% if ia_ativa %}<button class="mini icone" type="button" title="explicar com IA" data-ia-explicar="{{ t.id }}" data-titulo="{{ t.titulo }}">?</button>{% endif %}
+    {% else %}
+      <form class="inline" method="post" action="{{ url_for('tarefas.reabrir', tid=t.id) }}"><input type="hidden" name="next" value="{{ proximo }}"><button class="mini">reabrir</button></form>
+    {% endif %}
+    <a class="botao mini icone" href="{{ url_for('tarefas.form', tid=t.id, next=proximo) }}" title="editar">✎</a>
+  </div>
+</div>
+{%- endmacro %}

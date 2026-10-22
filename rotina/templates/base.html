@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block titulo %}{% endblock %} · {{ nome_app }}</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='3' fill='%230e1014'/><rect x='3' y='3' width='4' height='4' fill='%233ecf8e'/><rect x='9' y='3' width='4' height='4' fill='%232a7d5c'/><rect x='3' y='9' width='4' height='4' fill='%232a7d5c'/><rect x='9' y='9' width='4' height='4' fill='%233ecf8e'/></svg>">
+<link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}">
+</head>
+<body>
+{% set pagina = request.endpoint or '' %}
+<header class="topo">
+  <div class="topo-in">
+    <a class="marca" href="{{ url_for('hoje.hoje_view') }}">{{ nome_app|lower }}<span>_</span></a>
+    <nav class="nav">
+      <a href="{{ url_for('hoje.hoje_view') }}" class="{{ 'ativo' if pagina == 'hoje.hoje_view' }}">Hoje</a>
+      <a href="{{ url_for('habitos.lista') }}" class="{{ 'ativo' if pagina.startswith('habitos.') }}">Hábitos</a>
+      <a href="{{ url_for('tarefas.lista') }}" class="{{ 'ativo' if pagina.startswith('tarefas.') }}">Tarefas</a>
+      <a href="{{ url_for('projetos.lista') }}" class="{{ 'ativo' if pagina.startswith('projetos.') }}">Projetos</a>
+      <a href="{{ url_for('calendario.mes') }}" class="{{ 'ativo' if pagina.startswith('calendario.') }}">Calendário</a>
+      <a href="{{ url_for('evolucao.painel') }}" class="{{ 'ativo' if pagina.startswith('evolucao.') }}">Evolução</a>
+      <a href="{{ url_for('garagem.lista') }}" class="{{ 'ativo' if pagina.startswith('garagem.') }}">Garagem</a>
+      <a href="{{ url_for('hoje.fechamento') }}" class="{{ 'ativo' if pagina == 'hoje.fechamento' }}">Fechamento</a>
+      <a href="{{ url_for('hoje.ajustes') }}" class="{{ 'ativo' if pagina == 'hoje.ajustes' }}" title="Ajustes" aria-label="Ajustes">⚙</a>
+    </nav>
+    <form class="captura" method="post" action="{{ url_for('garagem.capturar') }}">
+      <input type="hidden" name="next" value="{{ request.full_path if request.method == 'GET' else '' }}">
+      <input name="texto" autocomplete="off" placeholder="💡 capturar ideia (/)  ·  “app:” = ideia do sistema" aria-label="Capturar ideia">
+    </form>
+  </div>
+</header>
+
+{% if timer %}
+<div class="timer-barra">
+  <div class="topo-in">
+    <span class="pulso"></span>
+    <span class="timer-tempo" data-timer-segundos="{{ timer.segundos }}" data-tarefa="{{ timer.tarefa.titulo }}">--:--</span>
+    <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0">{{ timer.tarefa.titulo }}</span>
+    <button class="mini" type="button" data-abrir-parar>■ parar</button>
+  </div>
+</div>
+<dialog id="dlg-parar">
+  <form method="post" action="{{ url_for('tarefas.timer_parar') }}">
+    <input type="hidden" name="next" value="{{ request.full_path }}">
+    <h3 style="margin-bottom:4px">Parar: {{ timer.tarefa.titulo }}</h3>
+    <p class="suave pequeno" style="margin-top:0">Duas respostas rápidas e pronto.</p>
+    <div class="campo">
+      <label>Foi uma sessão focada?</label>
+      <div class="radios">
+        <label><input type="radio" name="focada" value="sim"> sim, entrei no ritmo</label>
+        <label><input type="radio" name="focada" value="nao"> não, me distraí</label>
+      </div>
+    </div>
+    <div class="campo">
+      <label for="pp">Qual o próximo passo? <span class="fraco">(para a próxima sessão começar sem pensar)</span></label>
+      <input id="pp" name="proximo_passo" style="width:100%" maxlength="300" value="{{ timer.tarefa.proximo_passo }}" placeholder="ex.: abrir arquivo X e resolver a questão 4">
+    </div>
+    <div class="acoes" style="justify-content:flex-end">
+      <button type="button" data-fechar>cancelar</button>
+      <button class="primario">parar timer</button>
+    </div>
+  </form>
+</dialog>
+{% endif %}
+
+<main>
+  {% with msgs = get_flashed_messages() %}
+    {% for m in msgs %}<div class="flash">{{ m }}</div>{% endfor %}
+  {% endwith %}
+  {% block conteudo %}{% endblock %}
+</main>
+
+<dialog id="dlg-ia">
+  <div class="linha entre" style="margin-bottom:10px">
+    <h3 class="ia-titulo">Assistente</h3>
+    <button class="mini" type="button" data-fechar>fechar</button>
+  </div>
+  <div class="ia-texto"></div>
+</dialog>
+<div id="g-tooltip" class="g-tooltip" role="tooltip" hidden></div>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

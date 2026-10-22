@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m with context %}
+{% block titulo %}Calendário{% endblock %}
+{% block conteudo %}
+{% set mes_iso = base.strftime('%Y-%m') %}
+{% set aqui = request.full_path %}
+<div class="cabeca">
+  <div>
+    <h1>{{ titulo_mes|capitalize }}</h1>
+    <div class="suave pequeno">A barra de cada dia mostra quantos hábitos previstos foram cumpridos. Clique no dia para ver o detalhe.</div>
+  </div>
+  <div class="acoes">
+    <a class="botao mini" href="{{ url_for('calendario.mes', mes=anterior.strftime('%Y-%m')) }}">← {{ anterior|data_curta|replace('01 ', '') }}</a>
+    <a class="botao mini" href="{{ url_for('calendario.mes') }}">hoje</a>
+    <a class="botao mini" href="{{ url_for('calendario.mes', mes=seguinte.strftime('%Y-%m')) }}">{{ seguinte|data_curta|replace('01 ', '') }} →</a>
+  </div>
+</div>
+
+<div class="numeros" style="margin-bottom:16px">
+  <div class="numero"><b>{{ resumo.taxa if resumo.taxa is not none else '—' }}{% if resumo.taxa is not none %}%{% endif %}</b><span>hábitos cumpridos</span></div>
+  <div class="numero"><b>{{ (resumo.focados * 60)|duracao }}</b><span>focados</span></div>
+  <div class="numero"><b>{{ resumo.concluidas }}</b><span>tarefas concluídas</span></div>
+  <div class="numero"><b>{{ resumo.journal }}</b><span>dias com journaling</span></div>
+</div>
+
+<div class="cal-layout">
+  <section class="painel cal">
+    <div class="cal-grade">
+      {% for n in DIAS_SEMANA %}<div class="cal-cab">{{ n }}</div>{% endfor %}
+      {% for semana in semanas %}{% for c in semana %}
+        {% set sel = dia and c.data == dia %}
+        <a class="cal-dia {{ 'fora' if not c.no_mes }} {{ 'hoje' if c.hoje }} {{ 'sel' if sel }} {{ 'futuro' if c.futuro }}"
+           href="{{ url_for('calendario.mes', mes=c.data.strftime('%Y-%m'), dia=c.data.isoformat()) }}">
+          <div class="cal-topo">
+            <span class="cal-num">{{ c.data.day }}</span>
+            <span class="cal-marcas">
+              {% if c.prioridade %}<span class="{{ 'ok' if c.prioridade.status == 'feito' else '' }}" title="prioridade: {{ c.prioridade.titulo }}">★</span>{% endif %}
+              {% if c.journal %}<span title="journaling">✎</span>{% endif %}
+            </span>
+          </div>
+          {% if c.taxa is not none %}
+          <div class="cal-barra" title="{{ c.cumpridos }}/{{ c.previstos }} hábitos"><span style="width:{{ (c.taxa * 100)|round|int }}%" class="{{ 'cheia' if c.taxa >= 0.99 else '' }}"></span></div>
+          {% endif %}
+          <div class="cal-tarefas">
+            {% for t in c.prazos[:3] %}
+              {% set atr = t.status != 'feito' and t.prazo < hoje_data %}
+              <div class="cal-t {{ 'feita' if t.status == 'feito' }} {{ 'atr' if atr }}"{% if t.projeto %} style="border-left-color:{{ t.projeto.cor }}"{% endif %}>{{ t.titulo }}</div>
+            {% endfor %}
+            {% if c.prazos|length > 3 %}<div class="cal-mais">+{{ c.prazos|length - 3 }}</div>{% endif %}
+            {% if c.prazos %}<span class="cal-ponto" title="{{ c.prazos|length }} prazo(s)"></span>{% endif %}
+          </div>
+          {% if c.focados %}<div class="cal-tempo mono">{{ (c.focados * 60)|duracao }}</div>{% endif %}
+        </a>
+      {% endfor %}{% endfor %}
+    </div>
+    <div class="legenda" style="margin-top:12px">
+      <span><span class="cal-barra mini-leg"><span style="width:100%" class="cheia"></span></span> todos os hábitos</span>
+      <span>★ prioridade (verde = concluída)</span>
+      <span>✎ journaling</span>
+      <span class="mono">1h20</span><span>= tempo focado</span>
+    </div>
+  </section>
+
+  <aside>
+  {% if detalhe %}
+    <section class="painel">
+      <div class="linha entre" style="margin-bottom:8px">
+        <h3>{{ dia|data_extenso|capitalize }}</h3>
+        {% if dia <= hoje_data %}<a class="pequeno" href="{{ url_for('hoje.fechamento', data=dia.isoformat()) }}">fechamento →</a>{% endif %}
+      </div>
+
+      {% if detalhe.prioridade %}
+        <p class="pequeno" style="margin:0 0 10px"><span style="color:var(--aviso)">★</span> {{ detalhe.prioridade.titulo }}
+        {% if detalhe.prioridade.status == 'feito' %}<span class="selo feito">concluída</span>{% endif %}</p>
+      {% endif %}
+
+      <h2 style="margin-top:12px">Prazos</h2>
+      <ul class="lista">
+        {% for t in detalhe.prazos %}<li>{{ m.tarefa(t, aqui, hoje_data, ia_ativa, timer, compacta=True) }}</li>
+        {% else %}<li class="suave pequeno">Nenhum prazo neste dia.</li>{% endfor %}
+      </ul>
+      <form method="post" action="{{ url_for('tarefas.rapida') }}" class="linha" style="margin-top:8px">
+        <input type="hidden" name="next" value="{{ aqui }}">
+        <input type="hidden" name="prazo" value="{{ dia.isoformat() }}">
+        <input name="titulo" placeholder="+ tarefa com prazo neste dia" style="flex:1" autocomplete="off">
+      </form>
+
+      {% if dia <= hoje_data %}
+      <h2 style="margin-top:18px">Hábitos</h2>
+      <ul class="lista">
+        {% for x in detalhe.habitos %}{% if x.previsto %}
+        <li class="linha entre">
+          <span>{{ x.habito.nome }}{% if x.registro and x.registro.valor is not none %} <span class="mono fraco">{{ x.registro.valor|num }} {{ x.habito.unidade }}</span>{% endif %}</span>
+          <span class="selo {{ x.nivel or '' }}">{{ {'feito':'feito','minimo':'mínimo'}.get(x.nivel, 'não') }}</span>
+        </li>
+        {% endif %}{% endfor %}
+      </ul>
+
+      {% if detalhe.sessoes %}
+      <h2 style="margin-top:18px">Timer</h2>
+      <ul class="lista">
+        {% for s in detalhe.sessoes %}
+        <li class="linha entre pequeno">
+          <span><span class="mono fraco">{{ s.inicio.strftime('%H:%M') }}</span> {{ s.tarefa.titulo }}</span>
+          <span class="mono">{{ s.segundos|duracao }}{% if s.focada %} <span style="color:var(--feito)">●</span>{% endif %}</span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+
+      {% if detalhe.concluidas %}
+      <h2 style="margin-top:18px">Concluídas</h2>
+      <ul class="lista">{% for t in detalhe.concluidas %}<li class="pequeno">✓ {{ t.titulo }}</li>{% endfor %}</ul>
+      {% endif %}
+
+      {% if detalhe.fechamento and detalhe.fechamento.journaling %}
+      <h2 style="margin-top:18px">Journaling</h2>
+      <p class="pequeno" style="white-space:pre-wrap;margin:0;color:#c9cfdb">{{ detalhe.fechamento.journaling }}</p>
+      {% endif %}
+      {% endif %}
+    </section>
+  {% else %}
+    <section class="painel vazio"><p class="suave pequeno" style="margin:0">Clique em um dia para ver o detalhe.</p></section>
+  {% endif %}
+  </aside>
+</div>
+{% endblock %}

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block titulo %}Ajustes{% endblock %}
+{% block conteudo %}
+<div class="cabeca">
+  <div><h1>Ajustes</h1><div class="suave pequeno">Somente leitura. Para mudar, edite <span class="mono">config.json</span> e <span class="mono">.env</span> e reinicie (veja CONFIG.md).</div></div>
+</div>
+<div class="grade-2">
+  <section class="painel">
+    <h2>Geral</h2>
+    <table class="chaves">
+      <tr><td>Endereço</td><td class="mono">http://{{ cfg.host }}:{{ cfg.porta }}</td></tr>
+      <tr><td>Fuso horário</td><td class="mono">{{ cfg.fuso_horario }}</td></tr>
+      <tr><td>Início do uso</td><td class="mono">{{ inicio|data_br }}</td></tr>
+      <tr><td>Congelamento de funcionalidades</td><td class="mono">{{ cfg.dias_congelamento_funcionalidades }} dias → até {{ liberacao|data_br }}</td></tr>
+      <tr><td>Hábitos cadastrados</td><td class="mono">{{ total_habitos }}</td></tr>
+      <tr><td>Banco de dados</td><td class="mono">dados/rotina.db</td></tr>
+    </table>
+  </section>
+  <section class="painel">
+    <h2>IA</h2>
+    <table class="chaves">
+      <tr><td>Ativa</td><td>{% if ia.ativa %}<span class="selo feito">sim</span>{% else %}<span class="selo">não</span>{% endif %}</td></tr>
+      <tr><td>Provedor</td><td class="mono">{{ ia.provedor }}</td></tr>
+      <tr><td>Endpoint</td><td class="mono" style="overflow-wrap:anywhere">{{ ia.endpoint or '—' }}</td></tr>
+      <tr><td>Deployment / modelo</td><td class="mono">{{ ia.deployment or ia.modelo or '—' }}</td></tr>
+      <tr><td>API version</td><td class="mono">{{ ia.api_version }}</td></tr>
+      <tr><td>Chave no .env</td><td>{% if chave %}<span class="selo feito">presente</span>{% else %}<span class="selo atrasada">ausente</span>{% endif %}</td></tr>
+      <tr><td>Memória (cache)</td><td class="mono">{{ 'ligada' if ia.cache else 'desligada' }} · validade {{ ia.cache_dias|num }} dias</td></tr>
+      <tr><td>Respostas guardadas</td><td class="mono">{{ cache.respostas }} · reaproveitadas {{ cache.reaproveitadas }}× · ~{{ cache.tokens_economizados }} tokens poupados</td></tr>
+      <tr><td>Enviar journaling</td><td class="mono">{{ 'sim' if ia.enviar_journaling else 'não' }}</td></tr>
+    </table>
+    <p class="ajuda">A IA só lê e sugere. Envia ao provedor: tarefas abertas, hábitos e números da semana. Journaling só com <span class="mono">enviar_journaling: true</span>. Registro das chamadas (sem conteúdo) em <span class="mono">dados/ia_log.jsonl</span>.</p>
+    <p class="ajuda">Memória: a IA só é chamada quando o contexto muda (tarefas, hábitos, dia ou período do dia). Reabrir a mesma pergunta mostra a resposta guardada. “refazer” força uma nova.</p>
+    <div class="acoes">
+      <button type="button" data-ia-testar>testar conexão</button>
+      <form class="inline" method="post" action="{{ url_for('ia.limpar_cache') }}" data-confirmar="Apagar todas as respostas guardadas da IA?"><button class="mini">limpar memória</button></form>
+    </div>
+    <div class="ia-texto" data-ia-resultado-teste style="margin-top:10px"></div>
+  </section>
+</div>
+{% endblock %}

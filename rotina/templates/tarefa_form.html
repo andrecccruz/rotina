@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block titulo %}{{ 'Editar tarefa' if t else 'Nova tarefa' }}{% endblock %}
+{% block conteudo %}
+{% set voltar = request.args.get('next') or url_for('tarefas.lista') %}
+<div class="cabeca"><h1>{{ 'Editar tarefa' if t else 'Nova tarefa' }}</h1></div>
+<form method="post" class="painel" style="max-width:720px">
+  <input type="hidden" name="next" value="{{ voltar }}">
+  <div class="campo"><label>Título</label><input name="titulo" required maxlength="200" value="{{ t.titulo if t }}" style="width:100%" autofocus></div>
+  <div class="campos">
+    <div class="campo">
+      <label>Projeto</label>
+      <select name="projeto_id" style="width:100%">
+        <option value="">avulsa</option>
+        {% for p in projetos %}<option value="{{ p.id }}" {{ 'selected' if t and t.projeto_id == p.id }}>{{ p.nome }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="campo"><label>Prazo</label><input type="date" name="prazo" value="{{ t.prazo.isoformat() if t and t.prazo }}" style="width:100%"></div>
+    {% if t %}
+    <div class="campo">
+      <label>Status</label>
+      <select name="status" style="width:100%">
+        {% for k, v in t.STATUS.items() %}<option value="{{ k }}" {{ 'selected' if t.status == k }}>{{ v }}</option>{% endfor %}
+      </select>
+    </div>
+    {% endif %}
+  </div>
+  <div class="campo"><label>Próximo passo</label><input name="proximo_passo" maxlength="300" value="{{ t.proximo_passo if t }}" style="width:100%" placeholder="a primeira ação concreta, de 5–10 minutos"></div>
+  <div class="campo"><label>Descrição</label><textarea name="descricao" rows="4">{{ t.descricao if t }}</textarea></div>
+  {% if t and t.sessoes %}
+  <p class="pequeno suave">Tempo registrado: <span class="mono">{{ t.segundos_totais|duracao }}</span> em {{ t.sessoes|length }} sessão(ões), {{ t.sessoes|selectattr('focada')|list|length }} focada(s).</p>
+  {% endif %}
+  <div class="acoes" style="justify-content:space-between">
+    <div>
+    {% if t %}
+      <button form="excluir" class="mini perigo">excluir</button>
+    {% endif %}
+    </div>
+    <div class="acoes">
+      <a class="botao" href="{{ voltar }}">cancelar</a>
+      <button class="primario">salvar</button>
+    </div>
+  </div>
+</form>
+{% if t %}
+<form id="excluir" method="post" action="{{ url_for('tarefas.excluir', tid=t.id) }}" data-confirmar="Excluir esta tarefa e o tempo registrado nela?"></form>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,16 @@
+{# formulário de projeto: usado para criar (p=None) e editar #}
+<div class="campos">
+  <div class="campo"><label>Nome</label><input name="nome" required maxlength="80" value="{{ p.nome if p }}" style="width:100%"></div>
+  <div class="campo">
+    <label>Cor</label>
+    {% set atual = p.cor if p else sugestao %}
+    <div class="cores">
+      {% for c in cores %}
+        <label class="cor" title="{{ c }}"><input type="radio" name="cor" value="{{ c }}" {{ 'checked' if atual == c }}><span style="background:{{ c }}"></span></label>
+      {% endfor %}
+      {% if atual not in cores %}<label class="cor"><input type="radio" name="cor" value="{{ atual }}" checked><span style="background:{{ atual }}"></span></label>{% endif %}
+    </div>
+  </div>
+</div>
+<div class="campo"><label>Descrição <span class="fraco">(opcional: objetivo, prazo final, links)</span></label>
+  <textarea name="descricao" rows="3" style="min-height:70px">{{ p.descricao if p }}</textarea></div>

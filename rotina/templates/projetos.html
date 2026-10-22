@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block titulo %}Projetos{% endblock %}
+{% block conteudo %}
+<div class="cabeca">
+  <div><h1>Projetos</h1><div class="suave pequeno">Cada projeto agrupa tarefas. Abra um para ver números, tarefas e evolução.</div></div>
+</div>
+
+<details class="painel dobravel novo-projeto" {{ 'open' if not ativos }}>
+  <summary><span class="botao primario">+ novo projeto</span></summary>
+  <form method="post" action="{{ url_for('projetos.novo') }}" style="margin-top:14px">
+    {% set p = None %}{% include "_projeto_form.html" %}
+    <div class="acoes" style="justify-content:flex-end"><button class="primario">criar projeto</button></div>
+  </form>
+</details>
+
+<div class="cards">
+  {% for r in ativos %}{% set p = r.projeto %}
+  <a class="card-projeto" href="{{ url_for('projetos.detalhe', pid=p.id) }}" style="--cor:{{ p.cor }}">
+    <div class="linha entre">
+      <h3 class="linha" style="gap:8px"><span class="ponto" style="background:{{ p.cor }}"></span>{{ p.nome }}</h3>
+      {% if r.atrasadas %}<span class="selo atrasada">{{ r.atrasadas }} atrasada{{ 's' if r.atrasadas != 1 }}</span>{% endif %}
+    </div>
+    {% if p.descricao %}<p class="card-desc">{{ p.descricao }}</p>{% endif %}
+    <div class="progresso" title="{{ r.concluidas }} de {{ r.total }} concluídas">
+      <span style="width:{{ (r.progresso * 100)|round|int }}%"></span>
+    </div>
+    <div class="linha entre pequeno">
+      <span class="suave">{{ r.concluidas }} de {{ r.total }} concluídas</span>
+      <span class="mono">{{ (r.progresso * 100)|round|int }}%</span>
+    </div>
+    <div class="mini-numeros">
+      <div><b>{{ r.a_fazer }}</b><span>a fazer</span></div>
+      <div><b>{{ r.fazendo }}</b><span>fazendo</span></div>
+      <div><b>{{ r.concluidas }}</b><span>concluídas</span></div>
+      <div><b>{{ r.segundos|duracao if r.segundos else '—' }}</b><span>investido</span></div>
+    </div>
+    <div class="pequeno fraco">{% if r.proximo_prazo %}próximo prazo: {{ r.proximo_prazo|data_curta }}{% else %}sem prazos abertos{% endif %}</div>
+  </a>
+  {% endfor %}
+  <a class="card-projeto avulsas" href="{{ url_for('tarefas.lista', projeto='avulso') }}">
+    <h3>Avulsas</h3>
+    <p class="card-desc">Tarefas sem projeto.</p>
+    <div class="mini-numeros"><div><b>{{ avulsas }}</b><span>abertas</span></div></div>
+  </a>
+</div>
+
+{% if arquivados %}
+<h2 style="margin-top:26px">Arquivados</h2>
+<section class="painel">
+  <ul class="lista">
+  {% for r in arquivados %}{% set p = r.projeto %}
+    <li class="linha entre" style="flex-wrap:wrap">
+      <span class="linha"><span class="ponto" style="background:{{ p.cor }}"></span><a href="{{ url_for('projetos.detalhe', pid=p.id) }}">{{ p.nome }}</a>
+        <span class="pequeno fraco">{{ r.concluidas }}/{{ r.total }} concluídas</span></span>
+      <span class="acoes">
+        <form class="inline" method="post" action="{{ url_for('projetos.restaurar', pid=p.id) }}"><button class="mini">restaurar</button></form>
+        <form class="inline" method="post" action="{{ url_for('projetos.excluir', pid=p.id) }}" data-confirmar="Excluir “{{ p.nome }}”? As {{ r.total }} tarefa(s) viram avulsas."><button class="mini perigo">excluir</button></form>
+      </span>
+    </li>
+  {% endfor %}
+  </ul>
+</section>
+{% endif %}
+{% endblock %}

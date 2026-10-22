@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m with context %}
+{% block titulo %}Fechamento{% endblock %}
+{% block conteudo %}
+<div class="cabeca">
+  <div>
+    <h1>Fechamento — {{ d|data_extenso }}</h1>
+    <div class="suave pequeno">Dois minutos. Anota, escreve uma linha e deixa amanhã decidido.</div>
+  </div>
+  <div class="acoes">
+    <a class="botao mini" href="{{ url_for('hoje.fechamento', data=ontem.isoformat()) }}">← dia anterior</a>
+    {% if d != hoje_data %}<a class="botao mini" href="{{ url_for('hoje.fechamento') }}">hoje</a>{% endif %}
+  </div>
+</div>
+
+<form method="post" action="{{ url_for('hoje.fechamento', data=d.isoformat()) }}">
+<div class="grade-2">
+  <div>
+    <section class="painel">
+      <h2>1 · Registros do dia</h2>
+      {% for h in habitos %}{% set r = valores[h.id] %}
+        <div class="campo habito">
+          <div>
+            <div class="nome">{{ h.nome }}</div>
+            <div class="meta fraco">{{ m.descricao_meta(h) }}</div>
+          </div>
+          {% if h.tipo == 'numero' %}
+            <div class="valor">
+              <input name="valor_{{ h.id }}" inputmode="decimal" value="{{ r.valor|num if r }}" placeholder="—">
+              <span class="suave pequeno">{{ h.unidade }}</span>
+            </div>
+          {% else %}
+            {% set atual = r.nivel if r else '' %}
+            <div class="radios">
+              <label><input type="radio" name="nivel_{{ h.id }}" value="" {{ 'checked' if not atual }}> não</label>
+              <label><input type="radio" name="nivel_{{ h.id }}" value="minimo" {{ 'checked' if atual == 'minimo' }}> mínimo</label>
+              <label><input type="radio" name="nivel_{{ h.id }}" value="feito" {{ 'checked' if atual == 'feito' }}> feito</label>
+            </div>
+          {% endif %}
+        </div>
+      {% else %}
+        <p class="suave pequeno">Nenhum hábito marcado para o fechamento.</p>
+      {% endfor %}
+      <p class="ajuda">Redes e desbloqueios: veja em “tempo de tela” / “bem-estar digital” do celular.</p>
+    </section>
+
+    <section class="painel">
+      <h2>2 · Journaling</h2>
+      <textarea name="journaling" rows="6" placeholder="O que aconteceu, o que travou, o que funcionou. Uma linha já conta.">{{ fech.journaling if fech }}</textarea>
+    </section>
+  </div>
+
+  <div>
+    <section class="painel">
+      <h2>3 · Prioridade de {{ amanha|data_curta }}</h2>
+      <div class="campo">
+        <label>Tarefa</label>
+        <select name="prioridade_amanha" style="width:100%">
+          <option value="">— decidir depois —</option>
+          {% for t in abertas %}<option value="{{ t.id }}" {{ 'selected' if prioridade_amanha and prioridade_amanha.id == t.id }}>{{ t.titulo }}{% if t.prazo %} — {{ t.prazo|data_curta }}{% endif %}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="campo">
+        <label>Primeiro passo</label>
+        <input name="proximo_passo" maxlength="300" style="width:100%" value="{{ prioridade_amanha.proximo_passo if prioridade_amanha }}" placeholder="ex.: abrir o arquivo X e resolver a questão 4">
+      </div>
+    </section>
+
+    <section class="painel">
+      <h2>Automáticos do dia</h2>
+      <ul class="lista">
+      {% for h, nivel in automaticos %}
+        <li class="linha entre"><span>{{ h.nome }}</span><span class="selo {{ nivel or '' }}">{{ {'feito':'feito','minimo':'mínimo'}.get(nivel, 'não') }}</span></li>
+      {% endfor %}
+      </ul>
+      <p class="ajuda">Journaling conta quando você salva um texto aqui.</p>
+    </section>
+
+    <button class="primario" style="width:100%;justify-content:center;padding:11px">fechar o dia</button>
+    {% if fech %}<p class="ajuda" style="text-align:center">Último salvamento: {{ fech.salvo_em.strftime('%d/%m %H:%M') }}</p>{% endif %}
+  </div>
+</div>
+</form>
+{% endblock %}

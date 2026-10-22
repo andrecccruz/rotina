@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m with context %}
+{% block titulo %}{{ p.nome }}{% endblock %}
+{% block conteudo %}
+{% set aqui = request.full_path %}
+<div class="cabeca">
+  <div>
+    <a class="pequeno" href="{{ url_for('projetos.lista') }}">← projetos</a>
+    <h1 class="linha" style="gap:10px;margin-top:4px"><span class="ponto" style="background:{{ p.cor }};width:12px;height:12px"></span>{{ p.nome }}
+      {% if p.arquivado %}<span class="selo">arquivado</span>{% endif %}</h1>
+    {% if p.descricao %}<div class="suave pequeno" style="white-space:pre-wrap;max-width:720px">{{ p.descricao }}</div>{% endif %}
+  </div>
+  <div class="acoes">
+    {% if p.arquivado %}
+      <form class="inline" method="post" action="{{ url_for('projetos.restaurar', pid=p.id) }}"><button class="mini">restaurar</button></form>
+    {% else %}
+      <form class="inline" method="post" action="{{ url_for('projetos.arquivar', pid=p.id) }}" data-confirmar="Arquivar “{{ p.nome }}”? As tarefas continuam guardadas."><button class="mini">arquivar</button></form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="tiles">
+  <div class="tile"><span>Progresso</span><b>{{ (r.progresso * 100)|round|int }}%</b><div class="progresso"><span style="width:{{ (r.progresso * 100)|round|int }}%"></span></div></div>
+  <div class="tile"><span>Total</span><b>{{ r.total }}</b></div>
+  <div class="tile"><span>A fazer</span><b>{{ r.a_fazer }}</b></div>
+  <div class="tile"><span>Fazendo</span><b>{{ r.fazendo }}</b></div>
+  <div class="tile"><span>Concluídas</span><b>{{ r.concluidas }}</b></div>
+  <div class="tile {{ 'alerta' if r.atrasadas }}"><span>Atrasadas</span><b>{{ r.atrasadas }}</b></div>
+  <div class="tile"><span>Tempo investido</span><b>{{ r.segundos|duracao if r.segundos else '—' }}</b></div>
+</div>
+
+<div class="grade-2">
+  <div>
+    <section class="painel">
+      <h2>Abertas</h2>
+      <form method="post" action="{{ url_for('tarefas.rapida') }}" class="linha rapida">
+        <input type="hidden" name="next" value="{{ aqui }}">
+        <input type="hidden" name="projeto_id" value="{{ p.id }}">
+        <input name="titulo" placeholder="+ tarefa neste projeto" style="flex:1;min-width:160px" autocomplete="off">
+        <input type="date" name="prazo" aria-label="prazo">
+        <button>adicionar</button>
+      </form>
+      <ul class="lista">
+        {% for t in abertas %}<li>{{ m.tarefa(t, aqui, hoje_data, ia_ativa, timer) }}</li>
+        {% else %}<li class="suave pequeno">Nenhuma tarefa aberta.</li>{% endfor %}
+      </ul>
+    </section>
+    {% if concluidas %}
+    <details class="painel dobravel">
+      <summary><h2 style="display:inline;margin:0">Concluídas ({{ concluidas|length }})</h2></summary>
+      <ul class="lista" style="margin-top:10px">
+        {% for t in concluidas %}<li>{{ m.tarefa(t, aqui, hoje_data, ia_ativa, timer, compacta=True) }}</li>{% endfor %}
+      </ul>
+    </details>
+    {% endif %}
+  </div>
+
+  <div>
+    <section class="painel">
+      <h2>Últimos 30 dias</h2>
+      <div class="legenda-g"><span><i style="background:#2fae78"></i>concluídas no dia</span><span><i style="background:#5b8fe0"></i>a fazer no fim do dia</span></div>
+      <div class="grafico-caixa">{{ grafico }}</div>
+      <details class="tabela-dados"><summary>ver tabela</summary>
+        <table><thead><tr><th>Dia</th><th>Concluídas</th><th>A fazer</th><th>Criadas</th></tr></thead><tbody>
+        {% for x in serie|reverse %}<tr><td>{{ x.data|data_br }}</td><td>{{ x.concluidas }}</td><td>{{ x.a_fazer }}</td><td>{{ x.criadas }}</td></tr>{% endfor %}
+        </tbody></table>
+      </details>
+    </section>
+
+    <details class="painel dobravel">
+      <summary><h2 style="display:inline;margin:0">Editar projeto</h2></summary>
+      <form method="post" action="{{ url_for('projetos.editar', pid=p.id) }}" style="margin-top:12px">
+        {% set sugestao = p.cor %}{% include "_projeto_form.html" %}
+        <div class="acoes" style="justify-content:space-between">
+          {% if p.arquivado %}
+            <button form="excluir-proj" class="mini perigo">excluir projeto</button>
+          {% else %}<span></span>{% endif %}
+          <button class="primario">salvar</button>
+        </div>
+      </form>
+      {% if p.arquivado %}
+      <form id="excluir-proj" method="post" action="{{ url_for('projetos.excluir', pid=p.id) }}" data-confirmar="Excluir “{{ p.nome }}”? As {{ r.total }} tarefa(s) viram avulsas."></form>
+      {% endif %}
+    </details>
+  </div>
+</div>
+{% endblock %}

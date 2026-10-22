@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m with context %}
+{% block titulo %}Hábitos{% endblock %}
+{% block conteudo %}
+{% set aqui = url_for('habitos.lista') %}
+<div class="cabeca">
+  <div>
+    <h1>Hábitos</h1>
+    <div class="suave pequeno">Últimas 12 semanas. Mínimo e feito mantêm a sequência.</div>
+  </div>
+  <a class="botao primario" href="{{ url_for('habitos.form') }}">+ novo hábito</a>
+</div>
+
+<div class="legenda" style="margin-bottom:14px">
+  <span><span class="cel feito"></span>feito</span>
+  <span><span class="cel minimo"></span>mínimo</span>
+  <span><span class="cel falhou"></span>não feito</span>
+  <span><span class="cel pendente"></span>hoje</span>
+  <span><span class="cel livre"></span>não previsto</span>
+</div>
+
+{% for r in ativos %}{% set h = r.habito %}
+<section class="painel cartao-hab">
+  <div class="pilha">
+    <div class="linha entre" style="flex-wrap:wrap">
+      <h3>{{ h.nome }}</h3>
+      {{ m.sequencia(r) }}
+    </div>
+    <div class="pequeno suave">{{ m.frequencia(h) }} · {{ m.descricao_meta(h) }}{% if h.no_fechamento %} · <span class="fraco">no fechamento</span>{% endif %}</div>
+    <div class="linha" style="flex-wrap:wrap;gap:8px">
+      {% if r.agendado_hoje %}{{ m.check(r, aqui) }}{% endif %}
+      <a class="botao mini" href="{{ url_for('habitos.form', hid=h.id) }}">editar</a>
+      <form class="inline" method="post" action="{{ url_for('habitos.arquivar', hid=h.id) }}" data-confirmar="Arquivar “{{ h.nome }}”? O histórico fica guardado e você pode reativar depois.">
+        <button class="mini">arquivar</button>
+      </form>
+    </div>
+  </div>
+  <div>{{ m.grade(r.grade) }}</div>
+</section>
+{% else %}
+<section class="painel vazio"><p class="suave" style="margin:0">Nenhum hábito ativo.</p></section>
+{% endfor %}
+
+{% if arquivados %}
+<h2 style="margin-top:28px">Arquivados — para retomar quando quiser</h2>
+<section class="painel">
+  <ul class="lista">
+  {% for h, seq in arquivados %}
+    <li class="linha entre" style="flex-wrap:wrap">
+      <div>
+        <div>{{ h.nome }}</div>
+        <div class="pequeno suave">arquivado em {{ h.arquivado_em|data_br }} · melhor sequência: <span class="mono">{{ seq[1] }} {{ seq[2] }}</span></div>
+      </div>
+      <div class="acoes">
+        <form class="inline" method="post" action="{{ url_for('habitos.reativar', hid=h.id) }}"><button class="mini verde">reativar</button></form>
+        <form class="inline" method="post" action="{{ url_for('habitos.excluir', hid=h.id) }}" data-confirmar="Excluir “{{ h.nome }}” e TODO o histórico? Não dá para desfazer."><button class="mini perigo">excluir</button></form>
+      </div>
+    </li>
+  {% endfor %}
+  </ul>
+</section>
+{% endif %}
+{% endblock %}
